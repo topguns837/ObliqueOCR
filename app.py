@@ -12,8 +12,8 @@ from utils import RotNetDataGenerator, binarize_images
 
 from PIL import Image
 import cv2
-from flask import Flask,jsonify
-from flask import Flask, render_template,url_for,request
+
+from flask import Flask, render_template,url_for,request, jsonify
 
 app = Flask(__name__)
 
@@ -46,36 +46,31 @@ def angle_error(y_true, y_pred):
 model_location = 'rotnet_model.h5'
 model = load_model(model_location, custom_objects={'angle_error': angle_error})
 
-@app.route('/image-rotation/<string:input_path>', methods = ['GET'])
-def predict(input_path) :
+@app.route('/image-rotation', methods = ['GET','POST' ])
+def predict() :
     global model
+    input_path = ""
+    
+    if request.method == 'POST' :
+        
+        json = request.get_json()
+        input_path = json['url']
+         
+        
+        input_img = cv2.imread(input_path)
+        
+        resized_input = cv2.resize(input_img,  (256, 256), interpolation = cv2.INTER_NEAREST)
+        resized_input = np.expand_dims(resized_input, axis = 0)
+        
+        predicted_tensor = model.predict(resized_input)
+        predicted_angle = argmax(predicted_tensor, axis = 1)
+               
+        
+        return jsonify({"rotationAngle" : int(np.array(predicted_angle)[0])})
 
-    #input_img = load_img(input_path)
-    input_img = cv2.imread(input_path)
-    #X_test_np = np.array(input_img)
-    resized_input = cv2.resize(input_img,  (256, 256), interpolation = cv2.INTER_NEAREST)
-    resized_input = np.expand_dims(resized_input, axis = 0)
-    #print("SHAPE : ", resized_input.shape)
-    predicted_tensor = model.predict(resized_input)
-    predicted_angle = argmax(predicted_tensor, axis = 1)
-    print("predicted_angle : ", np.array(predicted_angle)[0])
+    
+    
 
-    #out = model.evaluate_generator(
-    '''RotNetDataGenerator(
-        X_test_np,
-        batch_size=128,
-        preprocess_func=binarize_images,
-        shuffle=True
-    )''' 
-    #steps=len(y_test) / batch_size
-
-    return jsonify({"rotationAngle" : int(np.array(predicted_angle)[0])})
-
-
-
-
-
-#Machine Learning code goes here
 if __name__ == '__main__':
     app.run(debug=True)
     
