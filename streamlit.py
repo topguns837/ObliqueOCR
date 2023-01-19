@@ -14,25 +14,27 @@ from PIL import Image
 import cv2
 import os
 
-os.chdir(os.getcwd())
+os.chdir(os.getcwd()) 
+
+flip_flag = False
 
 filename = "input.jpg"
 
-model = load_model("classification_efficientnet_augmented.h5", custom_objects = {"angle_error_classification" : angle_error_classification})
+col1, col2, col3 = st.columns(3)
+
+model = load_model("model/classification_efficientnet_augmented.h5", custom_objects = {"angle_error_classification" : angle_error_classification})
 
 def save_uploadedfile(uploadedfile):
     global filename
-    #filename = uploadedfile.name
 
     with open(os.path.join("temp","input.jpg"),"wb") as f:
-        f.write(uploadedfile.getbuffer())    
-    
-
-    return st.success("Successfuly uploaded file ")
+        f.write(uploadedfile.getbuffer())       
 
 
+st.markdown("<h1 style='text-align: center; color: grey;'>ObliqueOCR</h1>", unsafe_allow_html=True)
 
-st.write("Topic")
+st.write("\n\n")
+
 
 image_file = st.file_uploader("Enter the input image : ", type = ['png','jpeg','jpg'])
 
@@ -40,10 +42,10 @@ image_file = st.file_uploader("Enter the input image : ", type = ['png','jpeg','
 if image_file is not None : 
     save_uploadedfile(image_file)
 
-    print("Current Dir : ", os.getcwd())
-
     input = cv2.imread(os.path.join(os.getcwd() + "/temp/input.jpg")) 
-    st.image(input, caption = "Input Image", width = 200)    
+
+    st.image(input, caption = "Input Image", width = 200)  
+    st.write("\n\n")
 
     if input is None :
         print("Image is None")
@@ -54,19 +56,30 @@ if image_file is not None :
         
         pred_angle = np.argmax(model.predict(img_input)) 
 
-        st.write("Predicted Angle : ", pred_angle)
+        st.success("Predicted Angle : {}°".format(pred_angle))
+        st.write("\n\n")
 
         rotated_img = rotate(input, -pred_angle)
         
         st.image(rotated_img, caption = "Rotated Image", width = 200)
+        st.write("\n\n")
 
-        roi = get_roi(rotated_img)
+        roi = get_roi(rotated_img)        
 
+        flip_flag = st.button("Rotate ROI")
+
+        if flip_flag : 
+            roi = rotate(roi, 180)
+ 
         st.image(roi, caption = "ROI", width = 200)
+        st.write("\n\n")        
 
         text = ocr(roi)
 
-        st.write("Extracted Text : ", text[0])
+        if text is not [""] :
+            st.success("Extracted Text : " + text[0])
+        else :
+            st.error("Not able to extract text")
 
 
 
