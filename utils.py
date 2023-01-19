@@ -3,6 +3,9 @@ from keras.utils.np_utils import to_categorical
 import tensorflow.keras.backend as K
 import numpy as np
 import cv2
+import math 
+import matplotlib.pyplot as plt
+import easyocr
 
 def angle_difference(x, y):
     """
@@ -11,7 +14,7 @@ def angle_difference(x, y):
     return 180 - abs(abs(x - y) - 180)
 
 
-def angle_error(y_true, y_pred):
+def angle_error_classification(y_true, y_pred):
     """
     Calculate the mean diference between the true angles
     and the predicted angles. Each angle is represented
@@ -46,11 +49,10 @@ def rotate(image, angle):
     Rotates an OpenCV 2 / NumPy image about it's centre by the given angle
     (in degrees). The returned image will be large enough to hold the entire
     new image, with a black background
-
     Source: http://stackoverflow.com/questions/16702966/rotate-image-and-crop-out-black-borders
     """
     # Get the image size
-    # No that's not an error - NumPy stores image matricies backwards
+    # NumPy stores image matrices backwards
     image_size = (image.shape[1], image.shape[0])
     image_center = tuple(np.array(image_size) / 2)
 
@@ -433,3 +435,48 @@ def display_examples(model, input, num_images=5, size=None, crop_center=False,
 
     if save_path:
         plt.savefig(save_path)
+
+
+def ocr(src) :   
+    reader =  easyocr.Reader(['en'])
+    text = reader.readtext(src,paragraph="False", detail = 0)
+
+    if text is None or text==[] :
+        text = [""]
+    return text 
+
+# The function given below will extract the Region of Interest containing the text from the input image
+def get_roi(img) :
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) 
+    ret, thresh1 = cv2.threshold(img_gray, 120, 255, cv2.THRESH_BINARY)
+    thresh = cv2.dilate(thresh1, (5,5), iterations = 10)
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    x,y,w,h = cv2.boundingRect(contours[0])
+    roi = img[y : y + h, x : x + w]
+    return roi
+
+
+
+def pipeline_cnn(model, img_array) :
+
+    # Pre-processing image for making predictions
+    img_input = cv2.resize(img_array, (224, 224))
+    img_input = np.expand_dims(img_input, axis = 0) 
+    
+    # Making prediction using the pre-processed image
+    pred_angle = np.argmax(model.predict(img_input)) 
+    
+    # Rotate the image
+    rotated_img = rotate(img_array, -pred_angle)
+    
+    # Get the Region of Interest
+    roi = get_roi(rotated_img)
+    
+    # Extract text from the ROI
+    text = ocr(rotated_img)
+    
+    if text is None or text==[] :
+      text = [""]
+    
+
+    return [img_array, rotated_img, roi, text, pred_angle]
