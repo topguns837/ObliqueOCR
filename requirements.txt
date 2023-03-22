@@ -59,7 +59,7 @@ nvidia-cusparse-cu11==11.7.4.91
 nvidia-nccl-cu11==2.14.3
 nvidia-nvtx-cu11==11.7.91
 oauthlib==3.2.2
-opencv-python==4.6.0.66
+opencv-python==3.4.5.20
 opt-einsum==3.3.0
 packaging==23.0
 pandas==1.5.3
