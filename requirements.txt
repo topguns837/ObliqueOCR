@@ -90,7 +90,7 @@ rich==12.6.0
 rsa==4.9
 scikit-image==0.20.0
 scikit-learn==1.2.0
-scipy==1.9.3
+scipy
 semver==2.13.0
 shapely==2.0.1
 six==1.16.0
